@@ -27,6 +27,7 @@ namespace bt_bumpgo
 
 using namespace std::chrono_literals;
 using namespace std::placeholders;
+using std::placeholders::_1;
 
 IsObstacle::IsObstacle(
   const std::string & xml_tag_name,
@@ -36,12 +37,21 @@ IsObstacle::IsObstacle(
   config().blackboard->get("node", node_);
 
   // Complete here: Initialize laser_sub_ subscribing to /input_scan
+  auto laser_sub_ = node_->create_subscription<sensor_msgs::msg::LaserScan>(
+            "/input_scan",
+            100, //queue size
+            std::bind(&IsObstacle::laser_callback, this, _1)
+    );
+
+    sensor_msgs::msg::LaserScan last_scan_;
+
 }
 
 void
 IsObstacle::laser_callback(sensor_msgs::msg::LaserScan::UniquePtr msg)
 {
-  // Complete here: Store last_scan_
+  //Store last_scan_
+  last_scan_ = std::move(msg);
 }
 
 BT::NodeStatus
@@ -52,12 +62,19 @@ IsObstacle::tick()
     return BT::NodeStatus::FAILURE;
   }
 
-  double distance =1.0;
+  double distance = 1.0;
   getInput("distance",distance);
 
-  // Complete here: Return SUCCESS if there is an obstacle
+  //Return SUCCESS if there is an obstacle.
+  bool obstacle = last_scan_->ranges[last_scan_->ranges.size() / 2] < distance;
 
-  return BT::NodeStatus::FAILURE;
+  if (obstacle){
+      return BT::NodeStatus::SUCCESS;
+
+  }
+  else{
+      return BT::NodeStatus::FAILURE;
+  }
 }
 
 }  // namespace bt_bumpgo
